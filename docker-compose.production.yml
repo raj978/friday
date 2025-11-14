@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  friday:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USE_CUDA: "false"
+        USE_OLLAMA: "false"
+        USE_SLIM: "false"
+    image: friday:latest
+    container_name: friday
+    ports:
+      - "${FRIDAY_PORT:-3000}:8080"
+    volumes:
+      - friday-data:/app/backend/data
+    environment:
+      # Security
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+
+      # API Keys - Add your API keys to .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+
+      # API Base URLs (for custom endpoints)
+      - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL:-}
+      - ANTHROPIC_API_BASE_URL=${ANTHROPIC_API_BASE_URL:-}
+
+      # Disable Ollama since we're using API-only
+      - ENABLE_OLLAMA_API=false
+
+      # Performance optimizations
+      - WHISPER_MODEL=base
+      - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+      # Privacy settings
+      - ANONYMIZED_TELEMETRY=false
+      - DO_NOT_TRACK=true
+      - SCARF_NO_ANALYTICS=true
+
+      # Optional: Database (leave empty for SQLite)
+      - DATABASE_URL=${DATABASE_URL:-}
+
+      # Optional: CORS settings
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN:-*}
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  friday-data:
+    driver: local

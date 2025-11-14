@@ -1,0 +1,42 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arc Reactor inspired Friday logo -->
+  <!-- Outer gold ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#D4AF37" stroke-width="8"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#D4AF37" stroke-width="3" opacity="0.6"/>
+
+  <!-- Energy rings -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#1E90FF" stroke-width="2" opacity="0.4"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#1E90FF" stroke-width="2" opacity="0.5"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#1E90FF" stroke-width="3" opacity="0.6"/>
+
+  <!-- Core blue circle -->
+  <circle cx="256" cy="256" r="120" fill="#1E90FF" opacity="0.2"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#1E90FF" stroke-width="4"/>
+
+  <!-- Inner details - geometric arc reactor pattern -->
+  <g opacity="0.8">
+    <!-- Triangular energy paths -->
+    <path d="M 256 136 L 276 156 L 256 176 L 236 156 Z" fill="#D4AF37"/>
+    <path d="M 376 256 L 356 276 L 336 256 L 356 236 Z" fill="#D4AF37"/>
+    <path d="M 256 376 L 236 356 L 256 336 L 276 356 Z" fill="#D4AF37"/>
+    <path d="M 136 256 L 156 236 L 176 256 L 156 276 Z" fill="#D4AF37"/>
+
+    <!-- Diagonal paths -->
+    <path d="M 316 196 L 328 208 L 316 220 L 304 208 Z" fill="#1E90FF"/>
+    <path d="M 316 316 L 304 304 L 316 292 L 328 304 Z" fill="#1E90FF"/>
+    <path d="M 196 316 L 208 304 L 220 316 L 208 328 Z" fill="#1E90FF"/>
+    <path d="M 196 196 L 220 196 L 208 184 L 196 196 Z" fill="#1E90FF"/>
+  </g>
+
+  <!-- Central core -->
+  <circle cx="256" cy="256" r="60" fill="#1E90FF" opacity="0.3"/>
+  <circle cx="256" cy="256" r="60" fill="none" stroke="#D4AF37" stroke-width="3"/>
+
+  <!-- Center glow -->
+  <circle cx="256" cy="256" r="40" fill="#1E90FF" opacity="0.6"/>
+  <circle cx="256" cy="256" r="40" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.8"/>
+
+  <!-- Very center point -->
+  <circle cx="256" cy="256" r="15" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="256" cy="256" r="8" fill="#D4AF37"/>
+</svg>

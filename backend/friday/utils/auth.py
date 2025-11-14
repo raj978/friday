@@ -9,15 +9,12 @@ import os
 import bcrypt
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from cryptography.hazmat.primitives import serialization
 import json
 
 
 from datetime import datetime, timedelta
-import pytz
 from pytz import UTC
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union
 
 from opentelemetry import trace
 
@@ -57,7 +54,7 @@ def verify_signature(payload: str, signature: str) -> bool:
     """
     try:
         expected_signature = base64.b64encode(
-            hmac.new(TRUSTED_SIGNATURE_KEY, payload.encode(), hashlib.sha256).digest()
+            hmac.new(TRUSTED_SIGNATURE_KEY.encode(), payload.encode(), hashlib.sha256).digest()
         ).decode()
 
         # Compare securely to prevent timing attacks
@@ -167,7 +164,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
             hashed_password.encode("utf-8"),
         )
         if hashed_password
-        else None
+        else False
     )
 
 

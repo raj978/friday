@@ -174,7 +174,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_thread": int,
     }
 
-    def parse_json(value: str) -> dict:
+    def parse_json(value: str) -> dict | str:
         """
         Parses a JSON string into a dictionary, handling potential JSONDecodeError.
         """
@@ -248,19 +248,20 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
             images = []
 
             # Iterate through the list of content items
-            for item in content:
-                # Check if it's a text type
-                if item.get("type") == "text":
-                    content_text += item.get("text", "")
+            if isinstance(content, list):
+                for item in content:
+                    # Check if it's a text type
+                    if item.get("type") == "text":
+                        content_text += item.get("text", "")
 
-                # Check if it's an image URL type
-                elif item.get("type") == "image_url":
-                    img_url = item.get("image_url", {}).get("url", "")
-                    if img_url:
-                        # If the image url starts with data:, it's a base64 image and should be trimmed
-                        if img_url.startswith("data:"):
-                            img_url = img_url.split(",")[-1]
-                        images.append(img_url)
+                    # Check if it's an image URL type
+                    elif item.get("type") == "image_url":
+                        img_url = item.get("image_url", {}).get("url", "")
+                        if img_url:
+                            # If the image url starts with data:, it's a base64 image and should be trimmed
+                            if img_url.startswith("data:"):
+                                img_url = img_url.split(",")[-1]
+                            images.append(img_url)
 
             # Add content text (if any)
             if content_text:

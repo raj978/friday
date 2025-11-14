@@ -136,16 +136,10 @@ We welcome contributions! Please see CONTRIBUTING.md for guidelines.
 
 ## License
 
-This project is a fork of Friday, customized for personal second brain use.
+This project is Friday, customized for personal second brain use.
 
 Original Friday: MIT License
 Friday Customizations: MIT License
-
-## Credits
-
-Built on top of [Friday](https://github.com/YOUR_USERNAME/friday-second) - an excellent open-source AI interface.
-
-Special thanks to the Friday community for creating such a powerful foundation.
 
 ---
 

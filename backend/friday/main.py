@@ -1,15 +1,11 @@
 import asyncio
-import inspect
 import json
 import logging
 import mimetypes
 import os
-import shutil
 import sys
 import time
-import random
 import re
-from uuid import uuid4
 
 
 from contextlib import asynccontextmanager
@@ -17,8 +13,6 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
-from aiocache import cached
 import aiohttp
 import anyio.to_thread
 import requests
@@ -28,14 +22,10 @@ import requests
 from fastapi import (
     Depends,
     FastAPI,
-    File,
-    Form,
     HTTPException,
     Request,
-    UploadFile,
     status,
     applications,
-    BackgroundTasks,
 )
 from fastapi.openapi.docs import get_swagger_ui_html
 
@@ -558,7 +548,7 @@ async def lifespan(app: FastAPI):
                     "app": app,
                 }
             ),
-            None,
+            False,
         )
 
     yield
@@ -896,8 +886,8 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 try:
     app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL,
+        app.state.config.RAG_EMBEDDING_ENGINE.value,
+        app.state.config.RAG_EMBEDDING_MODEL.value,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
     if (
@@ -905,10 +895,10 @@ try:
         and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
     ):
         app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE,
-            app.state.config.RAG_RERANKING_MODEL,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+            app.state.config.RAG_RERANKING_ENGINE.value,
+            app.state.config.RAG_RERANKING_MODEL.value,
+            app.state.config.RAG_EXTERNAL_RERANKER_URL.value,
+            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY.value,
             RAG_RERANKING_MODEL_AUTO_UPDATE,
         )
     else:
@@ -1313,7 +1303,7 @@ async def chat_completion(
     metadata = {}
     try:
         if not model_item.get("direct", False):
-            if model_id not in request.app.state.MODELS:
+            if not model_id or model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
@@ -1803,8 +1793,8 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
 
 # Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
-if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
-    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS:
+if len(app.state.config.TOOL_SERVER_CONNECTIONS.value) > 0:
+    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS.value:
         if tool_server_connection.get("type", "openapi") == "mcp":
             server_id = tool_server_connection.get("info", {}).get("id")
             auth_type = tool_server_connection.get("auth_type", "none")
@@ -1854,7 +1844,7 @@ except Exception as e:
     )
 
 
-async def register_client(self, request, client_id: str) -> bool:
+async def register_client(request, client_id: str) -> bool:
     server_type, server_id = client_id.split(":", 1)
 
     connection = None

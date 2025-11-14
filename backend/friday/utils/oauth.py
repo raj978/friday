@@ -1,18 +1,15 @@
 import base64
-import copy
 import hashlib
 import logging
 import mimetypes
 import sys
-import urllib
+import urllib.parse
 import uuid
 import json
 from datetime import datetime, timedelta
 
 import re
 import fnmatch
-import time
-import secrets
 from cryptography.fernet import Fernet
 
 

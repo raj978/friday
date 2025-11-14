@@ -19,7 +19,7 @@ __pycache__/
 CLAUDE.md
 .claude/
 .kiro/
-.do/
+
 # C extensions
 *.so
 

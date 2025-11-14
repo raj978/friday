@@ -1,0 +1,176 @@
+name: friday-second-brain
+region: nyc
+services:
+  - name: web
+    source_dir: /
+    dockerfile_path: Dockerfile
+    github:
+      branch: master
+      deploy_on_push: true
+      repo: raj978/friday
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 90  # Allow time for model downloads on first start
+      period_seconds: 30
+      timeout_seconds: 10
+      success_threshold: 1
+      failure_threshold: 3
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: professional-xs  # 1GB RAM needed for Docker build (Node.js requires 4GB heap)
+    routes:
+      - path: /
+    envs:
+      # Disable Ollama since we're using external APIs
+      - key: ENABLE_OLLAMA_API
+        value: "false"
+
+      # Enable OpenAI API
+      - key: ENABLE_OPENAI_API
+        value: "true"
+
+      # OpenAI Configuration (set these in DO dashboard after deployment)
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: OPENAI_API_BASE_URL
+        value: "https://api.openai.com/v1"
+
+      # Anthropic/Claude Configuration (optional)
+      - key: ANTHROPIC_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # Security
+      - key: WEBUI_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # Auth settings
+      - key: ENABLE_SIGNUP
+        value: "true"
+
+      - key: DEFAULT_USER_ROLE
+        value: "user"
+
+      # Database (SQLite - data stored in /app/backend/data)
+      # DigitalOcean App Platform uses /app/backend/data with persistent storage
+      - key: DATABASE_URL
+        value: ""  # Leave empty to use default: sqlite:///app/backend/data/webui.db
+
+      - key: DATA_DIR
+        value: "/app/backend/data"
+
+      # Features to keep for second brain
+      - key: ENABLE_RAG_WEB_SEARCH
+        value: "true"
+
+      - key: ENABLE_IMAGE_GENERATION
+        value: "false"
+
+      - key: ENABLE_COMMUNITY_SHARING
+        value: "false"
+
+      # Disable collaborative features
+      - key: ENABLE_CHANNELS
+        value: "false"
+
+      # Application settings
+      - key: WEBUI_NAME
+        value: "Friday"
+
+      - key: PORT
+        value: "8080"
+
+      # CORS configuration
+      - key: CORS_ALLOW_ORIGIN
+        value: "*"
+
+      # Privacy & Telemetry (all disabled)
+      - key: SCARF_NO_ANALYTICS
+        value: "true"
+
+      - key: DO_NOT_TRACK
+        value: "true"
+
+      - key: ANONYMIZED_TELEMETRY
+        value: "false"
+
+      # Performance settings for AI models
+      - key: WHISPER_MODEL
+        value: "base"
+
+      - key: RAG_EMBEDDING_MODEL
+        value: "sentence-transformers/all-MiniLM-L6-v2"
+
+      # Env indicator
+      - key: ENV
+        value: "prod"
+
+      # Ollama Configuration (disabled for API-only mode)
+      - key: OLLAMA_BASE_URL
+        value: "/ollama"
+
+      # Additional AI Provider API Keys
+      - key: GOOGLE_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: ANTHROPIC_API_BASE_URL
+        value: ""  # Leave empty to use default
+
+      # Proxy/Network Configuration
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+
+      # RAG (Document Search) Configuration
+      - key: RAG_TOP_K
+        value: "5"
+
+      - key: RAG_CHUNK_SIZE
+        value: "1000"
+
+      - key: RAG_CHUNK_OVERLAP
+        value: "200"
+
+      - key: ENABLE_RAG_HYBRID_SEARCH
+        value: "false"
+
+      # File Upload Settings
+      - key: UPLOAD_FILE_SIZE_LIMIT
+        value: "100"
+
+      # Web Search Fallback for RAG
+      - key: RAG_WEB_SEARCH_ENGINE
+        value: ""  # Options: searxng, google, brave, serpstack, serper, serply, duckduckgo, tavily
+
+      # Authentication & User Management
+      - key: WEBUI_AUTH
+        value: "true"
+
+      - key: ENABLE_SIGNUP_PASSWORD_CONFIRMATION
+        value: "false"
+
+      # Session & Cookie Settings
+      - key: WEBUI_SESSION_COOKIE_SAME_SITE
+        value: "lax"
+
+      - key: WEBUI_SESSION_COOKIE_SECURE
+        value: "true"  # Enable for HTTPS (DigitalOcean provides SSL)
+
+      # Model Caching
+      - key: MODELS_CACHE_TTL
+        value: "1"
+
+      # Version Update Check (optional)
+      - key: ENABLE_VERSION_UPDATE_CHECK
+        value: "false"
+
+      # WebSocket Support
+      - key: ENABLE_WEBSOCKET_SUPPORT
+        value: "true"
+
+      # Compression Middleware
+      - key: ENABLE_COMPRESSION_MIDDLEWARE
+        value: "true"

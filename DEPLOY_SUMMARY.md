@@ -7,17 +7,47 @@
 2. **✅ UPGRADED**: `basic-xs` (512MB) → `professional-xs` (1GB RAM) - Required for Docker build
 3. **✅ FIXED**: Database path configured correctly for App Platform persistence
 
-### Added Environment Variables:
+### Added Environment Variables (41 total):
+
+**Core Settings:**
 - ✅ `WEBUI_NAME=Friday`
 - ✅ `PORT=8080`
+- ✅ `ENV=prod`
 - ✅ `DATA_DIR=/app/backend/data`
+
+**AI & APIs:**
+- ✅ `OLLAMA_BASE_URL=/ollama`
+- ✅ `GOOGLE_API_KEY` (SECRET - optional)
+- ✅ `ANTHROPIC_API_BASE_URL`
+
+**Network & Security:**
 - ✅ `CORS_ALLOW_ORIGIN=*`
+- ✅ `FORWARDED_ALLOW_IPS=*`
+- ✅ `WEBUI_AUTH=true`
+- ✅ `WEBUI_SESSION_COOKIE_SECURE=true`
+- ✅ `ENABLE_WEBSOCKET_SUPPORT=true`
+
+**Privacy & Telemetry:**
 - ✅ `SCARF_NO_ANALYTICS=true`
 - ✅ `DO_NOT_TRACK=true`
 - ✅ `ANONYMIZED_TELEMETRY=false`
+- ✅ `ENABLE_VERSION_UPDATE_CHECK=false`
+
+**RAG Configuration:**
 - ✅ `WHISPER_MODEL=base`
 - ✅ `RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2`
-- ✅ `ENV=prod`
+- ✅ `RAG_TOP_K=5`
+- ✅ `RAG_CHUNK_SIZE=1000`
+- ✅ `RAG_CHUNK_OVERLAP=200`
+- ✅ `ENABLE_RAG_HYBRID_SEARCH=false`
+- ✅ `RAG_WEB_SEARCH_ENGINE`
+
+**Performance:**
+- ✅ `UPLOAD_FILE_SIZE_LIMIT=100`
+- ✅ `MODELS_CACHE_TTL=1`
+- ✅ `ENABLE_COMPRESSION_MIDDLEWARE=true`
+
+**Plus 15+ more** - See `.do/ENV_VARIABLES_REFERENCE.md` for complete list
 
 ### Added Health Check Configuration:
 - ✅ `initial_delay_seconds: 90` - Allows time for model downloads

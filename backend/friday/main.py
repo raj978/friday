@@ -886,8 +886,8 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 try:
     app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE.value,
-        app.state.config.RAG_EMBEDDING_MODEL.value,
+        app.state.config.RAG_EMBEDDING_ENGINE,
+        app.state.config.RAG_EMBEDDING_MODEL,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
     if (
@@ -895,10 +895,10 @@ try:
         and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
     ):
         app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE.value,
-            app.state.config.RAG_RERANKING_MODEL.value,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL.value,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY.value,
+            app.state.config.RAG_RERANKING_ENGINE,
+            app.state.config.RAG_RERANKING_MODEL,
+            app.state.config.RAG_EXTERNAL_RERANKER_URL,
+            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
             RAG_RERANKING_MODEL_AUTO_UPDATE,
         )
     else:
@@ -1793,8 +1793,8 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
 
 # Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
-if len(app.state.config.TOOL_SERVER_CONNECTIONS.value) > 0:
-    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS.value:
+if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS:
         if tool_server_connection.get("type", "openapi") == "mcp":
             server_id = tool_server_connection.get("info", {}).get("id")
             auth_type = tool_server_connection.get("auth_type", "none")

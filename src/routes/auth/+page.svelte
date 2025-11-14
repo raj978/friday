@@ -75,7 +75,17 @@
 
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
-				toast.error(`${error}`);
+				const errorMessage = `${error}`;
+				// Check if error is about email already being registered
+				if (errorMessage.includes('already registered') || errorMessage.includes('EMAIL_TAKEN')) {
+					// Auto-switch to signin mode, clear password so user can enter their real password
+					mode = 'signin';
+					password = '';
+					confirmPassword = '';
+					toast.error($i18n.t('This email is already registered. Please enter your password to sign in.'));
+				} else {
+					toast.error(errorMessage);
+				}
 				return null;
 			}
 		);
@@ -395,7 +405,7 @@
 														: $i18n.t('Create Account')}
 											</button>
 
-											{#if $config?.features.enable_signup && !($config?.onboarding ?? false)}
+											{#if $config?.features.enable_signup}
 												<div class=" mt-4 text-sm text-center">
 													{mode === 'signin'
 														? $i18n.t("Don't have an account?")

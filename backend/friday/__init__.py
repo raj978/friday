@@ -76,7 +76,7 @@ def serve(
     from friday.env import UVICORN_WORKERS  # Import the workers setting
 
     uvicorn.run(
-        "open_webui.main:app",
+        "friday.main:app",
         host=host,
         port=port,
         forwarded_allow_ips="*",
@@ -91,7 +91,7 @@ def dev(
     reload: bool = True,
 ):
     uvicorn.run(
-        "open_webui.main:app",
+        "friday.main:app",
         host=host,
         port=port,
         reload=reload,

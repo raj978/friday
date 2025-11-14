@@ -57,10 +57,10 @@ def replace_imports(content):
     Replace the import paths in the content.
     """
     replacements = {
-        "from utils": "from open_webui.utils",
-        "from apps": "from open_webui.apps",
-        "from main": "from open_webui.main",
-        "from config": "from open_webui.config",
+        "from utils": "from friday.utils",
+        "from apps": "from friday.apps",
+        "from main": "from friday.main",
+        "from config": "from friday.config",
     }
 
     for old, new in replacements.items():

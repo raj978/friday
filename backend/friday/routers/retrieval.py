@@ -425,14 +425,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "status": True,
         # RAG settings
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
-        "TOP_K": request.app.state.config.TOP_K,
+        "TOP_K": request.app.state.config.RAG_TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         # Hybrid search settings
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-        "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
-        "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
-        "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
+        "TOP_K_RERANKER": request.app.state.config.RAG_TOP_K_RERANKER,
+        "RELEVANCE_THRESHOLD": request.app.state.config.RAG_RELEVANCE_THRESHOLD,
+        "HYBRID_BM25_WEIGHT": request.app.state.config.RAG_HYBRID_BM25_WEIGHT,
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
@@ -696,10 +696,10 @@ async def update_rag_config(
         if form_data.RAG_TEMPLATE is not None
         else request.app.state.config.RAG_TEMPLATE
     )
-    request.app.state.config.TOP_K = (
+    request.app.state.config.RAG_TOP_K = (
         form_data.TOP_K
         if form_data.TOP_K is not None
-        else request.app.state.config.TOP_K
+        else request.app.state.config.RAG_TOP_K
     )
     request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
         form_data.BYPASS_EMBEDDING_AND_RETRIEVAL
@@ -719,20 +719,20 @@ async def update_rag_config(
         else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
     )
 
-    request.app.state.config.TOP_K_RERANKER = (
+    request.app.state.config.RAG_TOP_K_RERANKER = (
         form_data.TOP_K_RERANKER
         if form_data.TOP_K_RERANKER is not None
-        else request.app.state.config.TOP_K_RERANKER
+        else request.app.state.config.RAG_TOP_K_RERANKER
     )
-    request.app.state.config.RELEVANCE_THRESHOLD = (
+    request.app.state.config.RAG_RELEVANCE_THRESHOLD = (
         form_data.RELEVANCE_THRESHOLD
         if form_data.RELEVANCE_THRESHOLD is not None
-        else request.app.state.config.RELEVANCE_THRESHOLD
+        else request.app.state.config.RAG_RELEVANCE_THRESHOLD
     )
-    request.app.state.config.HYBRID_BM25_WEIGHT = (
+    request.app.state.config.RAG_HYBRID_BM25_WEIGHT = (
         form_data.HYBRID_BM25_WEIGHT
         if form_data.HYBRID_BM25_WEIGHT is not None
-        else request.app.state.config.HYBRID_BM25_WEIGHT
+        else request.app.state.config.RAG_HYBRID_BM25_WEIGHT
     )
 
     # Content extraction settings
@@ -1151,14 +1151,14 @@ async def update_rag_config(
         "status": True,
         # RAG settings
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
-        "TOP_K": request.app.state.config.TOP_K,
+        "TOP_K": request.app.state.config.RAG_TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         # Hybrid search settings
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-        "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
-        "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
-        "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
+        "TOP_K_RERANKER": request.app.state.config.RAG_TOP_K_RERANKER,
+        "RELEVANCE_THRESHOLD": request.app.state.config.RAG_RELEVANCE_THRESHOLD,
+        "HYBRID_BM25_WEIGHT": request.app.state.config.RAG_HYBRID_BM25_WEIGHT,
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
@@ -2243,7 +2243,7 @@ def query_doc_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.RAG_TOP_K,
                 reranking_function=(
                     (
                         lambda sentences: request.app.state.RERANKING_FUNCTION(
@@ -2254,16 +2254,16 @@ def query_doc_handler(
                     else None
                 ),
                 k_reranker=form_data.k_reranker
-                or request.app.state.config.TOP_K_RERANKER,
+                or request.app.state.config.RAG_TOP_K_RERANKER,
                 r=(
                     form_data.r
                     if form_data.r
-                    else request.app.state.config.RELEVANCE_THRESHOLD
+                    else request.app.state.config.RAG_RELEVANCE_THRESHOLD
                 ),
                 hybrid_bm25_weight=(
                     form_data.hybrid_bm25_weight
                     if form_data.hybrid_bm25_weight
-                    else request.app.state.config.HYBRID_BM25_WEIGHT
+                    else request.app.state.config.RAG_HYBRID_BM25_WEIGHT
                 ),
                 user=user,
             )
@@ -2273,7 +2273,7 @@ def query_doc_handler(
                 query_embedding=request.app.state.EMBEDDING_FUNCTION(
                     form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.RAG_TOP_K,
                 user=user,
             )
     except Exception as e:
@@ -2310,7 +2310,7 @@ def query_collection_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.RAG_TOP_K,
                 reranking_function=(
                     (
                         lambda sentences: request.app.state.RERANKING_FUNCTION(
@@ -2321,16 +2321,16 @@ def query_collection_handler(
                     else None
                 ),
                 k_reranker=form_data.k_reranker
-                or request.app.state.config.TOP_K_RERANKER,
+                or request.app.state.config.RAG_TOP_K_RERANKER,
                 r=(
                     form_data.r
                     if form_data.r
-                    else request.app.state.config.RELEVANCE_THRESHOLD
+                    else request.app.state.config.RAG_RELEVANCE_THRESHOLD
                 ),
                 hybrid_bm25_weight=(
                     form_data.hybrid_bm25_weight
                     if form_data.hybrid_bm25_weight
-                    else request.app.state.config.HYBRID_BM25_WEIGHT
+                    else request.app.state.config.RAG_HYBRID_BM25_WEIGHT
                 ),
             )
         else:
@@ -2340,7 +2340,7 @@ def query_collection_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.RAG_TOP_K,
             )
 
     except Exception as e:

@@ -381,10 +381,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 user.id, request.app.state.config.USER_PERMISSIONS
             )
 
-            if not has_users:
-                # Disable signup after the first user is created
-                request.app.state.config.ENABLE_SIGNUP = False
-
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -401,6 +397,22 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
     except Exception as err:
         log.error(f"Signup error: {str(err)}")
         raise HTTPException(500, detail="An internal error occurred during signup.")
+
+
+@router.post("/onboarding/complete", response_model=bool)
+async def complete_onboarding(user=Depends(get_current_user)):
+    """Mark onboarding as completed for the current user."""
+    if user:
+        current_settings = user.settings or {}
+        ui_settings = current_settings.get("ui", {})
+        onboarding_settings = ui_settings.get("onboarding", {})
+        onboarding_settings["completed"] = True
+        ui_settings["onboarding"] = onboarding_settings
+        current_settings["ui"] = ui_settings
+
+        updated_user = Users.update_user_settings_by_id(user.id, current_settings)
+        return updated_user is not None
+    return False
 
 
 @router.get("/signout")

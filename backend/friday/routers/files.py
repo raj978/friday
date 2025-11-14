@@ -279,10 +279,7 @@ def upload_file_handler(
 
 @router.get("/", response_model=list[FileModelResponse])
 async def list_files(user=Depends(get_verified_user), content: bool = Query(True)):
-    if user.role == "admin":
-        files = Files.get_files()
-    else:
-        files = Files.get_files_by_user_id(user.id)
+    files = Files.get_files_by_user_id(user.id)
 
     if not content:
         for file in files:
@@ -310,10 +307,7 @@ async def search_files(
     Search for files by filename with support for wildcard patterns.
     """
     # Get files according to user role
-    if user.role == "admin":
-        files = Files.get_files()
-    else:
-        files = Files.get_files_by_user_id(user.id)
+    files = Files.get_files_by_user_id(user.id)
 
     # Get matching files
     matching_files = [
@@ -378,7 +372,6 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
         return file
@@ -403,7 +396,6 @@ async def get_file_process_status(
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
         if stream:
@@ -463,7 +455,6 @@ async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
         return {"content": file.data.get("content", "")}
@@ -497,7 +488,6 @@ async def update_file_data_content_by_id(
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "write", user)
     ):
         try:
@@ -538,7 +528,6 @@ async def get_file_content_by_id(
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
         try:
@@ -604,16 +593,8 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    file_user = Users.get_user_by_id(file.user_id)
-    if not file_user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
         try:
@@ -655,7 +636,6 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
         file_path = file.path
@@ -717,7 +697,6 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         file.user_id == user.id
-        or user.role == "admin"
         or has_access_to_file(id, "write", user)
     ):
 

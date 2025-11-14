@@ -1188,7 +1188,7 @@ MODEL_ORDER_LIST = PersistentConfig(
 DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
-    os.getenv("DEFAULT_USER_ROLE", "pending"),
+    os.getenv("DEFAULT_USER_ROLE", "admin"),
 )
 
 PENDING_USER_OVERLAY_TITLE = PersistentConfig(
@@ -1454,7 +1454,7 @@ WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
 )
 
-ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
+ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "False").lower() == "true"
 
 ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
@@ -1463,13 +1463,13 @@ ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
 BYPASS_ADMIN_ACCESS_CONTROL = (
     os.environ.get(
         "BYPASS_ADMIN_ACCESS_CONTROL",
-        os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True"),
+        os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "False"),
     ).lower()
     == "true"
 )
 
 ENABLE_ADMIN_CHAT_ACCESS = (
-    os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
+    os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "False").lower() == "true"
 )
 
 ENABLE_COMMUNITY_SHARING = PersistentConfig(

@@ -291,6 +291,8 @@ from friday.config import (
     ENABLE_ONEDRIVE_BUSINESS,
     ENABLE_RAG_HYBRID_SEARCH,
     RAG_SEARCH_ALL_BY_DEFAULT,
+    RAG_ENABLE_WEB_FALLBACK,
+    RAG_WEB_FALLBACK_THRESHOLD,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
@@ -728,10 +730,12 @@ app.state.TOOL_CONTENTS = {}
 ########################################
 
 
-app.state.config.TOP_K = RAG_TOP_K
-app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
-app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
-app.state.config.HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
+app.state.config.RAG_TOP_K = RAG_TOP_K
+app.state.config.RAG_TOP_K_RERANKER = RAG_TOP_K_RERANKER
+app.state.config.RAG_RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
+app.state.config.RAG_HYBRID_BM25_WEIGHT = RAG_HYBRID_BM25_WEIGHT
+app.state.config.RAG_ENABLE_WEB_FALLBACK = RAG_ENABLE_WEB_FALLBACK
+app.state.config.RAG_WEB_FALLBACK_THRESHOLD = RAG_WEB_FALLBACK_THRESHOLD
 
 
 app.state.config.ALLOWED_FILE_EXTENSIONS = RAG_ALLOWED_FILE_EXTENSIONS
@@ -1584,11 +1588,19 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
-    user_count = Users.get_num_users()
     onboarding = False
 
     if user is None:
-        onboarding = user_count == 0
+        # Not authenticated - always show onboarding for new visitors
+        onboarding = True
+    else:
+        # Authenticated - check if user has completed onboarding
+        has_seen_onboarding = False
+        if user.settings:
+            has_seen_onboarding = user.settings.get("ui", {}).get("onboarding", {}).get("completed", False)
+
+        # Only show onboarding if user hasn't seen it
+        onboarding = not has_seen_onboarding
 
     return {
         **({"onboarding": True} if onboarding else {}),

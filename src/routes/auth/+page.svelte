@@ -80,6 +80,22 @@
 			}
 		);
 
+		// Mark onboarding as complete in database and localStorage
+		if (sessionUser) {
+			try {
+				await fetch(`${WEBUI_API_BASE_URL}/auths/onboarding/complete`, {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${sessionUser.token}`,
+						'Content-Type': 'application/json'
+					}
+				});
+				localStorage.setItem('hasSeenOnboarding', 'true');
+			} catch (error) {
+				console.error('Failed to mark onboarding complete:', error);
+			}
+		}
+
 		await setSessionUser(sessionUser);
 	};
 
@@ -177,7 +193,9 @@
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		} else {
-			onboarding = $config?.onboarding ?? false;
+			// Check localStorage first for performance
+			const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true';
+			onboarding = hasSeenOnboarding ? false : ($config?.onboarding ?? false);
 		}
 	});
 </script>
@@ -192,6 +210,7 @@
 	bind:show={onboarding}
 	getStartedHandler={() => {
 		onboarding = false;
+		localStorage.setItem('hasSeenOnboarding', 'true');
 		mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
 	}}
 />

@@ -19,6 +19,7 @@ from friday.models.auths import (
 from friday.models.users import Users, UpdateProfileForm
 from friday.models.groups import Groups
 from friday.models.oauth_sessions import OAuthSessions
+from friday.models.models import Models, ModelModel, ModelParams, ModelMeta
 
 from friday.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from friday.env import (
@@ -376,6 +377,56 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                         "user": user.model_dump_json(exclude_none=True),
                     },
                 )
+
+            # Auto-sync OpenAI models if this is the first admin and no models exist
+            if role == "admin" and not has_users:
+                try:
+                    model_count = len(Models.get_models())
+                    if model_count == 0 and request.app.state.config.ENABLE_OPENAI_API:
+                        log.info(f"First admin user created. Auto-syncing OpenAI models for user {user.id}...")
+
+                        # Fetch OpenAI models
+                        for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
+                            try:
+                                key = request.app.state.config.OPENAI_API_KEYS[idx] if idx < len(request.app.state.config.OPENAI_API_KEYS) else ""
+
+                                if not key or not url:
+                                    continue
+
+                                headers = {"Authorization": f"Bearer {key}"}
+                                async with ClientSession() as session:
+                                    async with session.get(f"{url}/models", headers=headers) as response:
+                                        if response.status == 200:
+                                            data = await response.json()
+                                            models_data = data.get("data", [])
+
+                                            if models_data:
+                                                # Convert to ModelModel objects
+                                                models_to_sync = []
+                                                for model in models_data:
+                                                    models_to_sync.append(ModelModel(
+                                                        id=model["id"],
+                                                        user_id=user.id,
+                                                        name=model.get("name", model["id"]),
+                                                        params=ModelParams(),
+                                                        meta=ModelMeta(
+                                                            description=f"OpenAI model: {model['id']}",
+                                                            capabilities={}
+                                                        ),
+                                                        access_control=None,  # Public - shared with all users
+                                                        is_active=True,
+                                                        created_at=model.get("created", int(time.time())),
+                                                        updated_at=int(time.time())
+                                                    ))
+
+                                                # Sync to database
+                                                Models.sync_models(user.id, models_to_sync)
+                                                log.info(f"Successfully synced {len(models_to_sync)} OpenAI models from {url}")
+                                                break  # Only sync from first successful URL
+                            except Exception as e:
+                                log.error(f"Failed to auto-sync OpenAI models from {url}: {e}")
+                except Exception as e:
+                    log.error(f"Error during OpenAI model auto-sync: {e}")
 
             user_permissions = get_permissions(
                 user.id, request.app.state.config.USER_PERMISSIONS

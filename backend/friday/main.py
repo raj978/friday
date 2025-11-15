@@ -91,7 +91,7 @@ from friday.internal.db import Session, engine
 
 # Functions removed in Friday rebrand
 # from open_webui.models.functions import Functions
-from friday.models.models import Models
+from friday.models.models import Models, ModelModel, ModelParams, ModelMeta
 from friday.models.users import UserModel, Users
 from friday.models.chats import Chats
 
@@ -1589,6 +1589,7 @@ async def get_app_config(request: Request):
             user = Users.get_user_by_id(data["id"])
 
     onboarding = False
+    user_count = Users.get_num_users()
 
     if user is None:
         # Not authenticated - always show onboarding for new visitors
@@ -1596,8 +1597,10 @@ async def get_app_config(request: Request):
     else:
         # Authenticated - check if user has completed onboarding
         has_seen_onboarding = False
-        if user.settings:
-            has_seen_onboarding = user.settings.get("ui", {}).get("onboarding", {}).get("completed", False)
+        if user.settings and hasattr(user.settings, 'ui') and isinstance(user.settings.ui, dict):
+            onboarding_data = user.settings.ui.get("onboarding", {})
+            if isinstance(onboarding_data, dict):
+                has_seen_onboarding = onboarding_data.get("completed", False)
 
         # Only show onboarding if user hasn't seen it
         onboarding = not has_seen_onboarding

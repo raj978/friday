@@ -488,8 +488,10 @@ async def get_filtered_models(models, user):
 )
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info("get_all_models()")
+    log.info(f"ENABLE_OPENAI_API = {request.app.state.config.ENABLE_OPENAI_API}")
 
     if not request.app.state.config.ENABLE_OPENAI_API:
+        log.info("ENABLE_OPENAI_API is False, returning empty data")
         return {"data": []}
 
     responses = await get_all_models_responses(request, user=user)

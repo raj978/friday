@@ -51,6 +51,7 @@ from friday.routers.images import (
     EditImageForm,
 )
 from friday.routers.memories import query_memory, QueryMemoryForm
+from friday.utils.memory_extractor import auto_extract_and_save_memories
 
 from friday.utils.webhook import post_webhook
 from friday.utils.files import (
@@ -632,76 +633,109 @@ async def chat_unified_knowledge_search_handler(
             hybrid_bm25_weight=request.app.state.config.RAG_HYBRID_BM25_WEIGHT,
         )
 
-        # Check if results meet relevance threshold
-        if not results.results or not results.is_relevant(request.app.state.config.RAG_WEB_FALLBACK_THRESHOLD):
-            log.info(f"No relevant results found (max_score={results.max_score}, threshold={request.app.state.config.RAG_WEB_FALLBACK_THRESHOLD})")
+        # Check if we have any results at all
+        if not results.results:
+            log.info(f"No results found from unified search")
 
-            # Emit status: no relevant results
-            if request.app.state.config.RAG_ENABLE_WEB_FALLBACK:
-                await event_emitter({
-                    "type": "status",
-                    "data": {
-                        "action": "unified_knowledge_search",
-                        "description": "No relevant information found in knowledge base",
-                        "done": True,
-                    },
-                })
-            else:
-                await event_emitter({
-                    "type": "status",
-                    "data": {
-                        "action": "unified_knowledge_search",
-                        "description": "No relevant information found in knowledge base (web search disabled)",
-                        "done": True,
-                    },
-                })
+            # Emit status: no results found
+            await event_emitter({
+                "type": "status",
+                "data": {
+                    "action": "unified_knowledge_search",
+                    "description": "No information found in knowledge base",
+                    "done": True,
+                },
+            })
 
             # Don't add files - let web search handler proceed if enabled
             return form_data
 
-        # Convert results to files format for RAG processing
-        files = []
-        sources_info = []
+        # We have results - check if they meet threshold for strong relevance
+        is_highly_relevant = results.is_relevant(request.app.state.config.RAG_WEB_FALLBACK_THRESHOLD)
+
+        # Group results by source for better status message
+        source_counts = {}
+        for result in results.results:
+            source_name = result.source_name
+            if source_name not in source_counts:
+                source_counts[source_name] = {"count": 0, "max_score": 0.0}
+            source_counts[source_name]["count"] += 1
+            source_counts[source_name]["max_score"] = max(source_counts[source_name]["max_score"], result.score)
+
+        # Build source breakdown message
+        source_parts = [f"{count['count']} from {source} (score: {count['max_score']:.2f})"
+                       for source, count in source_counts.items()]
+        source_summary = ", ".join(source_parts)
+
+        log.info(f"Found {len(results.results)} results: {source_summary} (threshold={request.app.state.config.RAG_WEB_FALLBACK_THRESHOLD}, highly_relevant={is_highly_relevant})")
+
+        # Build context string from unified search results
+        context_string = ""
+        sources_list = []
+        citation_idx_map = {}
 
         for idx, result in enumerate(results.results):
-            # Add collection to files
-            files.append({
-                "id": result.source,
-                "type": "collection",
-                "name": result.source_name,
-                "collection_name": result.source,
-            })
+            source_id = result.source
+            source_name = result.source_name
+
+            # Track citation index
+            if source_id not in citation_idx_map:
+                citation_idx_map[source_id] = len(citation_idx_map) + 1
+
+            # Add content with source citation
+            context_string += (
+                f'<source id="{citation_idx_map[source_id]}"'
+                + (f' name="{source_name}"' if source_name else "")
+                + f'>{result.content}</source>\n'
+            )
 
             # Prepare source info for UI
             content_preview = result.content[:200] + "..." if len(result.content) > 200 else result.content
-            sources_info.append({
-                "source": result.source_name,
-                "score": round(result.score, 3),
-                "content_preview": content_preview,
-            })
+            source_obj = {
+                "source": {
+                    "id": source_id,
+                    "name": source_name,
+                },
+                "document": [result.content],
+                "metadata": [{
+                    "source": source_id,
+                    "name": source_name,
+                    "score": result.score,
+                }],
+            }
 
-        # Add files to form_data for RAG processing
-        form_data["files"] = files
+            # Avoid duplicate sources
+            if source_id not in [s.get("source", {}).get("id") for s in sources_list]:
+                sources_list.append(source_obj)
 
-        # Emit sources information
-        await event_emitter({
-            "type": "sources",
-            "data": {
-                "sources": sources_info,
-            },
-        })
+        # Inject context into user message using RAG template
+        context_string = context_string.strip()
+        if context_string:
+            user_message = get_last_user_message(form_data["messages"])
+            form_data["messages"] = add_or_update_user_message(
+                rag_template(
+                    request.app.state.config.RAG_TEMPLATE,
+                    context_string,
+                    user_message,
+                ),
+                form_data["messages"],
+            )
 
-        # Emit completion status
+        # Emit completion status with source breakdown
+        result_word = "result" if len(results.results) == 1 else "results"
+        status_description = f"Found {len(results.results)} {result_word}: {source_summary}"
+
         await event_emitter({
             "type": "status",
             "data": {
                 "action": "unified_knowledge_search",
-                "description": f"Found {len(results.results)} relevant results from knowledge base",
+                "description": status_description,
                 "done": True,
+                "sources": sources_list,  # Include sources in status for UI
             },
         })
 
-        log.info(f"Unified search: added {len(files)} collections from {len(results.sources)} sources")
+        log.info(f"Unified search: injected {len(results.results)} results as context from {len(results.sources)} sources")
 
         return form_data
 
@@ -1142,7 +1176,7 @@ async def chat_completion_files_handler(
                         embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                             query, prefix=prefix, user=user
                         ),
-                        k=request.app.state.config.TOP_K,
+                        k=request.app.state.config.RAG_TOP_K,
                         reranking_function=(
                             (
                                 lambda sentences: request.app.state.RERANKING_FUNCTION(
@@ -1152,9 +1186,9 @@ async def chat_completion_files_handler(
                             if request.app.state.RERANKING_FUNCTION
                             else None
                         ),
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                        k_reranker=request.app.state.config.RAG_TOP_K_RERANKER,
+                        r=request.app.state.config.RAG_RELEVANCE_THRESHOLD,
+                        hybrid_bm25_weight=request.app.state.config.RAG_HYBRID_BM25_WEIGHT,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
                         full_context=all_full_context
                         or request.app.state.config.RAG_FULL_CONTEXT,
@@ -1396,12 +1430,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 request, form_data, extra_params, user
             )
 
-        # Unified knowledge search - searches all knowledge bases by default
-        if request.app.state.config.RAG_SEARCH_ALL_BY_DEFAULT:
-            form_data = await chat_unified_knowledge_search_handler(
-                request, form_data, extra_params, user
-            )
+    # Unified knowledge search - searches all knowledge bases by default
+    if request.app.state.config.RAG_SEARCH_ALL_BY_DEFAULT:
+        form_data = await chat_unified_knowledge_search_handler(
+            request, form_data, extra_params, user
+        )
 
+    if features:
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
@@ -1715,8 +1750,8 @@ async def process_chat_response(
             # the original messages outside of this handler
 
             messages = []
-            for message in message_list:
-                content = message.get("content", "")
+            for msg in message_list:
+                content = msg.get("content", "")
                 if isinstance(content, list):
                     for item in content:
                         if item.get("type") == "text":
@@ -1733,8 +1768,8 @@ async def process_chat_response(
 
                 messages.append(
                     {
-                        **message,
-                        "role": message.get(
+                        **msg,
+                        "role": msg.get(
                             "role", "assistant"
                         ),  # Safe fallback for missing role
                         "content": content,
@@ -1920,6 +1955,86 @@ async def process_chat_response(
                                 )
                             except Exception as e:
                                 pass
+
+                # Auto-extract and save memories from conversation
+                log.info(f"Memory extraction check: messages={len(messages) if messages else 0}, user_id={user.id if hasattr(user, 'id') else 'unknown'}")
+                if messages and len(messages) > 0:
+                    try:
+                        # Check if user has auto-extraction enabled (default to True)
+                        auto_extract_enabled = True
+                        if hasattr(user, 'id'):
+                            user_obj = Users.get_user_by_id(user.id)
+                            if user_obj and user_obj.settings:
+                                # UserSettings is a Pydantic model, use getattr
+                                auto_extract_enabled = getattr(user_obj.settings, "auto_extract_memories", True)
+                                log.info(f"User {user.id} auto_extract_memories setting: {auto_extract_enabled}")
+                            else:
+                                log.info(f"User {user.id} has no settings, using default: True")
+                        else:
+                            log.warning("User has no id attribute, using default auto_extract: True")
+
+                        model_id = message.get("model") if message else None
+                        log.info(f"Memory extraction - auto_extract_enabled: {auto_extract_enabled}, model_id: {model_id}, message_exists: {message is not None}")
+
+                        if auto_extract_enabled:
+                            # Emit status: starting memory extraction
+                            await event_emitter({
+                                "type": "status",
+                                "data": {
+                                    "action": "memory_extraction",
+                                    "description": "Analyzing conversation for memories",
+                                    "done": False,
+                                },
+                            })
+
+                            log.info(f"Starting memory extraction for user {user.id if hasattr(user, 'id') else 'unknown'} with {len(messages)} messages")
+                            result = await auto_extract_and_save_memories(
+                                request=request,
+                                messages=messages,
+                                user=user,
+                                model_id=model_id
+                            )
+
+                            if result and result.get('saved', 0) > 0:
+                                # Emit status: memories saved
+                                log.info(f"Memory extraction COMPLETE: {result['extracted']} extracted, {result['saved']} saved, memories: {result.get('memories', [])}")
+                                await event_emitter({
+                                    "type": "status",
+                                    "data": {
+                                        "action": "memory_extraction",
+                                        "description": f"Saved {result['saved']} memory" + ("" if result['saved'] == 1 else "ies"),
+                                        "done": True,
+                                    },
+                                })
+                            else:
+                                # Emit status: no memories extracted
+                                log.info(f"Memory extraction returned no new memories")
+                                await event_emitter({
+                                    "type": "status",
+                                    "data": {
+                                        "action": "memory_extraction",
+                                        "description": "No new memories to save",
+                                        "done": True,
+                                    },
+                                })
+                        else:
+                            log.info(f"Memory extraction disabled for user {user.id if hasattr(user, 'id') else 'unknown'}")
+                    except Exception as e:
+                        import traceback
+                        log.error(f"Error during memory extraction: {e}\n{traceback.format_exc()}")
+                        # Emit error status
+                        try:
+                            await event_emitter({
+                                "type": "status",
+                                "data": {
+                                    "action": "memory_extraction",
+                                    "description": "Error extracting memories",
+                                    "done": True,
+                                },
+                            })
+                        except:
+                            pass
+                        # Don't fail the request if memory extraction fails
 
     event_emitter = None
     event_caller = None
@@ -3318,6 +3433,7 @@ async def process_chat_response(
                 )
 
                 await background_tasks_handler()
+
             except asyncio.CancelledError:
                 log.warning("Task was cancelled!")
                 await event_emitter({"type": "chat:tasks:cancel"})
@@ -3367,8 +3483,95 @@ async def process_chat_response(
                 if data:
                     yield data
 
+        # Memory extraction background task for fallback streaming path
+        async def memory_extraction_background_task():
+            """Extract and save memories after streaming completes (fallback path)"""
+            try:
+                # Run original background task if it exists
+                if response.background is not None:
+                    await response.background()
+
+                # Build messages list from chat history (same logic as background_tasks_handler)
+                message = None
+                messages = []
+
+                if "chat_id" in metadata and not metadata["chat_id"].startswith("local:"):
+                    messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
+                    message = messages_map.get(metadata["message_id"]) if messages_map else None
+
+                    message_list = get_message_list(messages_map, metadata["message_id"])
+
+                    # Build messages list
+                    messages = []
+                    for msg in message_list:
+                        content = msg.get("content", "")
+                        if isinstance(content, list):
+                            for item in content:
+                                if item.get("type") == "text":
+                                    content = item["text"]
+                                    break
+
+                        if isinstance(content, str):
+                            content = re.sub(
+                                r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
+                                "",
+                                content,
+                                flags=re.S | re.I,
+                            ).strip()
+
+                        messages.append(
+                            {
+                                **msg,
+                                "role": msg.get("role", "assistant"),
+                                "content": content,
+                            }
+                        )
+
+                # Auto-extract and save memories from conversation (fallback streaming path)
+                log.info(f"Memory extraction check (fallback streaming): messages={len(messages) if messages else 0}, user_id={user.id if hasattr(user, 'id') else 'unknown'}")
+                if messages and len(messages) > 0:
+                    try:
+                        # Check if user has auto-extraction enabled (default to True)
+                        auto_extract_enabled = True
+                        if hasattr(user, 'id'):
+                            user_obj = Users.get_user_by_id(user.id)
+                            if user_obj and user_obj.settings:
+                                # UserSettings is a Pydantic model, use getattr
+                                auto_extract_enabled = getattr(user_obj.settings, "auto_extract_memories", True)
+                                log.info(f"User {user.id} auto_extract_memories setting: {auto_extract_enabled}")
+                            else:
+                                log.info(f"User {user.id} has no settings, using default: True")
+                        else:
+                            log.warning("User has no id attribute, using default auto_extract: True")
+
+                        model_id = message.get("model") if message else None
+                        log.info(f"Memory extraction (fallback streaming) - auto_extract_enabled: {auto_extract_enabled}, model_id: {model_id}, message_exists: {message is not None}")
+
+                        if auto_extract_enabled:
+                            log.info(f"Starting memory extraction for user {user.id if hasattr(user, 'id') else 'unknown'} with {len(messages)} messages")
+                            result = await auto_extract_and_save_memories(
+                                request=request,
+                                messages=messages,
+                                user=user,
+                                model_id=model_id
+                            )
+
+                            if result and result.get('saved', 0) > 0:
+                                log.info(f"Memory extraction COMPLETE: {result['extracted']} extracted, {result['saved']} saved, memories: {result.get('memories', [])}")
+                            else:
+                                log.info(f"Memory extraction returned no new memories")
+                        else:
+                            log.info(f"Memory extraction disabled for user {user.id if hasattr(user, 'id') else 'unknown'}")
+                    except Exception as e:
+                        import traceback
+                        log.error(f"Error during memory extraction (fallback streaming): {e}\n{traceback.format_exc()}")
+                        # Don't fail the request if memory extraction fails
+            except Exception as e:
+                import traceback
+                log.error(f"Error in memory extraction background task: {e}\n{traceback.format_exc()}")
+
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
             headers=dict(response.headers),
-            background=response.background,
+            background=memory_extraction_background_task,
         )

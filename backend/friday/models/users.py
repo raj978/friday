@@ -51,6 +51,7 @@ class User(Base):
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
+    auto_extract_memories: Optional[bool] = True
     model_config = ConfigDict(extra="allow")
     pass
 

@@ -171,6 +171,7 @@ type Settings = {
 	userLocation?: any;
 	webSearch?: any;
 	memory?: boolean;
+	auto_extract_memories?: boolean;
 	autoTags?: boolean;
 	autoFollowUps?: boolean;
 	splitLargeChunks?(body: any, splitLargeChunks: any): unknown;

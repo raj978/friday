@@ -8,6 +8,7 @@
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
+	import { syncModels } from '$lib/apis/models';
 
 	import { config, models, settings, user } from '$lib/stores';
 
@@ -81,6 +82,36 @@
 
 			if (res) {
 				toast.success($i18n.t('OpenAI API settings updated'));
+
+				// Auto-sync OpenAI models to database if enabled
+				if (ENABLE_OPENAI_API) {
+					try {
+						const openaiModelsResponse = await getOpenAIModels(localStorage.token);
+						if (openaiModelsResponse && openaiModelsResponse.data && openaiModelsResponse.data.length > 0) {
+							const modelsToSync = openaiModelsResponse.data.map((model) => ({
+								id: model.id,
+								name: model.name || model.id,
+								object: 'model',
+								created: model.created || Math.floor(Date.now() / 1000),
+								owned_by: model.owned_by || 'openai',
+								info: {
+									meta: {
+										description: `OpenAI model: ${model.id}`,
+										capabilities: {}
+									}
+								},
+								is_active: true
+							}));
+
+							await syncModels(localStorage.token, modelsToSync);
+							toast.success($i18n.t('OpenAI models synced to database'));
+						}
+					} catch (error) {
+						console.error('Failed to sync OpenAI models:', error);
+						toast.error($i18n.t('Failed to sync OpenAI models'));
+					}
+				}
+
 				await models.set(await getModels());
 			}
 		}

@@ -122,6 +122,28 @@
 					{/if}
 				</div>
 			</div>
+		{:else if status?.action === 'memory_extraction'}
+			<div class="flex flex-col justify-center -space-y-0.5">
+				<div
+					class="{(done || status?.done) === false
+						? 'shimmer'
+						: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+				>
+					<!-- $i18n.t('Analyzing conversation for memories') -->
+					<!-- $i18n.t('No new memories to save') -->
+					{#if status?.description === 'Analyzing conversation for memories'}
+						{$i18n.t('Analyzing conversation for memories')}
+					{:else if status?.description === 'No new memories to save'}
+						{$i18n.t('No new memories to save')}
+					{:else if status?.description === 'Error extracting memories'}
+						{$i18n.t('Error extracting memories')}
+					{:else if status?.description?.includes('Saved')}
+						{status?.description}
+					{:else}
+						{status?.description}
+					{/if}
+				</div>
+			</div>
 		{:else}
 			<div class="flex flex-col justify-center -space-y-0.5">
 				<div

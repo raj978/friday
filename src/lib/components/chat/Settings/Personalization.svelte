@@ -15,9 +15,11 @@
 
 	// Addons
 	let enableMemory = false;
+	let enableAutoExtractMemories = true;
 
 	onMount(async () => {
-		enableMemory = $settings?.memory ?? false;
+		enableMemory = $settings?.memory ?? true;
+		enableAutoExtractMemories = $settings?.auto_extract_memories ?? true;
 	});
 </script>
 
@@ -55,6 +57,31 @@
 				</div>
 			</div>
 		</div>
+
+		{#if enableMemory}
+			<div class="mt-3">
+				<div class="flex items-center justify-between mb-1">
+					<div class="text-sm font-medium">
+						{$i18n.t('Auto-Extract Memories')}
+					</div>
+
+					<div class="">
+						<Switch
+							bind:state={enableAutoExtractMemories}
+							on:change={async () => {
+								saveSettings({ auto_extract_memories: enableAutoExtractMemories });
+							}}
+						/>
+					</div>
+				</div>
+
+				<div class="text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t(
+						'Automatically extract and save important information from your conversations as memories.'
+					)}
+				</div>
+			</div>
+		{/if}
 
 		<div class="text-xs text-gray-600 dark:text-gray-400">
 			<div>

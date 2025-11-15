@@ -59,6 +59,34 @@ export const importModels = async (token: string, models: object[]) => {
 	return res;
 };
 
+export const syncModels = async (token: string, models: object[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/sync`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ models: models })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getBaseModels = async (token: string = '') => {
 	let error = null;
 

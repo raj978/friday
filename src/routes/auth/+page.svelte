@@ -51,7 +51,7 @@
 				redirectPath = $page.url.searchParams.get('redirect') || '/';
 			}
 
-			goto(redirectPath);
+			await goto(redirectPath);
 			localStorage.removeItem('redirectPath');
 		}
 	};
@@ -400,9 +400,7 @@
 											>
 												{mode === 'signin'
 													? $i18n.t('Sign in')
-													: ($config?.onboarding ?? false)
-														? $i18n.t('Create Admin Account')
-														: $i18n.t('Create Account')}
+													: $i18n.t('Create Account')}
 											</button>
 
 											{#if $config?.features.enable_signup}
